@@ -41,3 +41,7 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Private/local
+private/
+.claude/settings.local.json

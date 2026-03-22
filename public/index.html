@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volcano Lists — GVP Search</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.5;
+    }
+
+    header {
+      background: linear-gradient(135deg, #d32f2f, #ff6f00);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header h1 { font-size: 1.5rem; font-weight: 600; }
+    #stats-bar { font-size: 0.85rem; opacity: 0.9; }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 1.5rem;
+    }
+
+    .filters-panel {
+      background: white;
+      border-radius: 8px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 1rem;
+      max-height: calc(100vh - 6rem);
+      overflow-y: auto;
+    }
+
+    .filters-panel h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .filter-group {
+      margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      background: white;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: #d32f2f;
+      box-shadow: 0 0 0 2px rgba(211,47,47,0.15);
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .btn-clear {
+      background: #eee;
+      color: #555;
+      width: 100%;
+      margin-top: 0.5rem;
+    }
+
+    .btn-clear:hover { background: #ddd; }
+
+    .results-panel {
+      min-height: 300px;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .results-header h2 {
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .result-count {
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    .results-table {
+      width: 100%;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .results-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .results-table th {
+      background: #fafafa;
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-bottom: 2px solid #eee;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .results-table th:hover { color: #d32f2f; }
+    .results-table th .sort-arrow { margin-left: 4px; font-size: 0.65rem; }
+
+    .results-table td {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .results-table tr:hover td { background: #fafafa; }
+
+    .epoch-badge {
+      display: inline-block;
+      padding: 0.1rem 0.4rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .epoch-holocene { background: #e8f5e9; color: #2e7d32; }
+    .epoch-pleistocene { background: #e3f2fd; color: #1565c0; }
+
+    .no-results {
+      text-align: center;
+      padding: 3rem;
+      color: #999;
+      background: white;
+      border-radius: 8px;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .pagination button {
+      padding: 0.4rem 0.8rem;
+      border: 1px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .pagination button:hover:not(:disabled) { border-color: #d32f2f; color: #d32f2f; }
+    .pagination button:disabled { opacity: 0.4; cursor: default; }
+    .pagination span { font-size: 0.85rem; color: #666; }
+
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: #999;
+    }
+
+    .citation {
+      max-width: 1400px;
+      margin: 2rem auto 1rem;
+      padding: 1rem 1.5rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      font-size: 0.8rem;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .citation a { color: #d32f2f; text-decoration: none; }
+    .citation a:hover { text-decoration: underline; }
+    .citation p { margin: 0.25rem 0; }
+
+    @media (max-width: 900px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .filters-panel {
+        position: static;
+        max-height: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Volcano Lists</h1>
+  <div id="stats-bar"></div>
+</header>
+
+<div class="container">
+  <aside class="filters-panel">
+    <h2>Filters</h2>
+
+    <div class="filter-group">
+      <label for="query">Search</label>
+      <input type="text" id="query" placeholder="Name, country, region...">
+    </div>
+
+    <div class="filter-group">
+      <label for="country">Country</label>
+      <select id="country"><option value="">All countries</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="region">Region</label>
+      <select id="region"><option value="">All regions</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="volcanoType">Volcano Type</label>
+      <select id="volcanoType"><option value="">All types</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="rockType">Rock Type</label>
+      <select id="rockType"><option value="">All rock types</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="tectonicSetting">Tectonic Setting</label>
+      <select id="tectonicSetting"><option value="">All settings</option></select>
+    </div>
+
+    <div class="filter-group">
+      <label for="epoch">Epoch</label>
+      <select id="epoch">
+        <option value="">All</option>
+        <option value="Holocene">Holocene</option>
+        <option value="Pleistocene">Pleistocene</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Elevation (m)</label>
+      <div class="range-row">
+        <input type="number" id="minElevation" placeholder="Min">
+        <input type="number" id="maxElevation" placeholder="Max">
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>Latitude</label>
+      <div class="range-row">
+        <input type="number" id="minLatitude" placeholder="Min" step="0.1">
+        <input type="number" id="maxLatitude" placeholder="Max" step="0.1">
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label>Longitude</label>
+      <div class="range-row">
+        <input type="number" id="minLongitude" placeholder="Min" step="0.1">
+        <input type="number" id="maxLongitude" placeholder="Max" step="0.1">
+      </div>
+    </div>
+
+    <button class="btn btn-clear" id="clear-btn">Clear All Filters</button>
+  </aside>
+
+  <main class="results-panel">
+    <div class="results-header">
+      <h2>Results</h2>
+      <span class="result-count" id="result-count"></span>
+    </div>
+    <div id="results-container">
+      <div class="loading">Loading volcano data...</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<footer class="citation">
+  <p><strong>Data Citation:</strong> Global Volcanism Program, 2025. [Database] Volcanoes of the World (v. 5.3.4; 30 Dec 2025). Distributed by Smithsonian Institution, compiled by Venzke, E. <a href="https://doi.org/10.5479/si.GVP.VOTW5-2025.5.3" target="_blank" rel="noopener">https://doi.org/10.5479/si.GVP.VOTW5-2025.5.3</a></p>
+  <p>Source: <a href="https://volcano.si.edu/" target="_blank" rel="noopener">Global Volcanism Program, Smithsonian Institution</a></p>
+</footer>
+
+<script>
+(function() {
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+  let currentResults = [];
+  let sortCol = 'volcanoName';
+  let sortDir = 1;
+
+  const filterIds = [
+    'query', 'country', 'region', 'volcanoType', 'rockType',
+    'tectonicSetting', 'epoch', 'minElevation', 'maxElevation',
+    'minLatitude', 'maxLatitude', 'minLongitude', 'maxLongitude'
+  ];
+
+  async function loadFacets() {
+    const res = await fetch('/api/facets');
+    const facets = await res.json();
+    populateSelect('country', facets.countries, 'All countries');
+    populateSelect('region', facets.regions, 'All regions');
+    populateSelect('volcanoType', facets.volcanoTypes, 'All types');
+    populateSelect('rockType', facets.rockTypes, 'All rock types');
+    populateSelect('tectonicSetting', facets.tectonicSettings, 'All settings');
+  }
+
+  async function loadStats() {
+    const res = await fetch('/api/stats');
+    const s = await res.json();
+    document.getElementById('stats-bar').textContent =
+      s.total + ' volcanoes | ' + s.holocene + ' Holocene | ' +
+      s.pleistocene + ' Pleistocene | ' + s.countries + ' countries';
+  }
+
+  function populateSelect(id, values, placeholder) {
+    const el = document.getElementById(id);
+    el.innerHTML = '<option value="">' + placeholder + '</option>';
+    values.forEach(function(v) {
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = v;
+      el.appendChild(opt);
+    });
+  }
+
+  function buildQueryString() {
+    const params = new URLSearchParams();
+    filterIds.forEach(function(id) {
+      const val = document.getElementById(id).value.trim();
+      if (val) params.set(id, val);
+    });
+    return params.toString();
+  }
+
+  async function doSearch() {
+    currentPage = 1;
+    const qs = buildQueryString();
+    const res = await fetch('/api/search?' + qs);
+    const data = await res.json();
+    currentResults = data.volcanoes;
+    sortResults();
+    render();
+  }
+
+  function sortResults() {
+    currentResults.sort(function(a, b) {
+      let va = a[sortCol];
+      let vb = b[sortCol];
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return 1 * sortDir;
+      return 0;
+    });
+  }
+
+  function render() {
+    const total = currentResults.length;
+    document.getElementById('result-count').textContent =
+      total + ' volcano' + (total !== 1 ? 'es' : '') + ' found';
+
+    const container = document.getElementById('results-container');
+
+    if (total === 0) {
+      container.innerHTML = '<div class="no-results">No volcanoes match your filters.</div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page = currentResults.slice(start, start + PAGE_SIZE);
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+
+    const columns = [
+      { key: 'volcanoNumber', label: 'GVP #' },
+      { key: 'volcanoName', label: 'Name' },
+      { key: 'country', label: 'Country' },
+      { key: 'primaryVolcanoType', label: 'Type' },
+      { key: 'elevation', label: 'Elev (m)' },
+      { key: 'volcanicRegion', label: 'Region' },
+      { key: 'lastKnownEruption', label: 'Last Eruption' },
+      { key: 'dominantRockType', label: 'Rock Type' },
+      { key: 'epoch', label: 'Epoch' },
+      { key: 'latitude', label: 'Lat' },
+      { key: 'longitude', label: 'Lon' }
+    ];
+
+    let html = '<div class="results-table"><table><thead><tr>';
+    columns.forEach(function(col) {
+      const arrow = sortCol === col.key ? (sortDir === 1 ? ' ▲' : ' ▼') : '';
+      html += '<th data-col="' + col.key + '">' + col.label +
+        '<span class="sort-arrow">' + arrow + '</span></th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    page.forEach(function(v) {
+      const epochClass = v.epoch === 'Holocene' ? 'epoch-holocene' : 'epoch-pleistocene';
+      html += '<tr>' +
+        '<td><a href="https://volcano.si.edu/volcano.cfm?vn=' + v.volcanoNumber + '" target="_blank" rel="noopener">' + v.volcanoNumber + '</a></td>' +
+        '<td><strong>' + esc(v.volcanoName) + '</strong></td>' +
+        '<td>' + esc(v.country) + '</td>' +
+        '<td>' + esc(v.primaryVolcanoType) + '</td>' +
+        '<td>' + v.elevation + '</td>' +
+        '<td>' + esc(v.volcanicRegion) + '</td>' +
+        '<td>' + esc(v.lastKnownEruption) + '</td>' +
+        '<td>' + esc(v.dominantRockType) + '</td>' +
+        '<td><span class="epoch-badge ' + epochClass + '">' + v.epoch + '</span></td>' +
+        '<td>' + v.latitude + '</td>' +
+        '<td>' + v.longitude + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // Pagination
+    let pagHtml = '';
+    if (totalPages > 1) {
+      pagHtml += '<button ' + (currentPage <= 1 ? 'disabled' : '') +
+        ' onclick="window.__volcanoPrev()">Previous</button>';
+      pagHtml += '<span>Page ' + currentPage + ' of ' + totalPages + '</span>';
+      pagHtml += '<button ' + (currentPage >= totalPages ? 'disabled' : '') +
+        ' onclick="window.__volcanoNext()">Next</button>';
+    }
+    document.getElementById('pagination').innerHTML = pagHtml;
+
+    // Sort handlers
+    container.querySelectorAll('th[data-col]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        const col = th.getAttribute('data-col');
+        if (sortCol === col) {
+          sortDir *= -1;
+        } else {
+          sortCol = col;
+          sortDir = 1;
+        }
+        sortResults();
+        render();
+      });
+    });
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // Pagination global handlers
+  window.__volcanoNext = function() { currentPage++; render(); window.scrollTo(0, 0); };
+  window.__volcanoPrev = function() { currentPage--; render(); window.scrollTo(0, 0); };
+
+  // Debounced search
+  let timer;
+  function debouncedSearch() {
+    clearTimeout(timer);
+    timer = setTimeout(doSearch, 250);
+  }
+
+  // Bind filter events
+  filterIds.forEach(function(id) {
+    const el = document.getElementById(id);
+    el.addEventListener('input', debouncedSearch);
+    el.addEventListener('change', debouncedSearch);
+  });
+
+  // Clear button
+  document.getElementById('clear-btn').addEventListener('click', function() {
+    filterIds.forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    doSearch();
+  });
+
+  // Init
+  loadFacets();
+  loadStats();
+  doSearch();
+})();
+</script>
+
+</body>
+</html>

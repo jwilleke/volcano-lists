@@ -84,6 +84,12 @@ npm run format           # Format code with Prettier
 
 See [ARCHITECTURE.md](ARCHITECTURE.md#project-structure) for the complete project structure.
 
+## Data Citation
+
+> Global Volcanism Program, 2025. [Database] Volcanoes of the World (v. 5.3.4; 30 Dec 2025). Distributed by Smithsonian Institution, compiled by Venzke, E. <https://doi.org/10.5479/si.GVP.VOTW5-2025.5.3>
+
+Source: [Global Volcanism Program, Smithsonian Institution](https://volcano.si.edu/)
+
 ## Next Steps
 
 See [docs/project_log.md](docs/project_log.md) for current status and session history.
