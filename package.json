@@ -5,7 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "import": "ts-node src/import.ts",
+    "import": "ts-node src/import-api.ts",
+    "import:xls": "ts-node src/import.ts",
+    "import:eruptions": "ts-node src/import-api.ts -- --eruptions",
+    "import:activity": "ts-node src/import-activity.ts",
+    "import:global-activity": "ts-node src/import-api.ts -- --activity",
+    "import:earthquakes": "ts-node src/import-earthquakes.ts",
     "dev": "ts-node src/index.ts",
     "web": "ts-node src/server.ts",
     "build": "tsc",

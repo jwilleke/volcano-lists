@@ -6,6 +6,10 @@ pnpm-lock.yaml
 
 # Generated data
 data/volcanoes.json
+data/eruptions.json
+data/activity.json
+data/global-activity.json
+data/earthquakes.json
 
 # Build output
 dist/

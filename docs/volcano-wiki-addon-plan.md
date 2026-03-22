@@ -17,7 +17,7 @@ The approach: build a self-contained amdWiki addon (`volcano-wiki`) that creates
 - **Data refresh** updates only `volcanoes.json`; wiki page bodies are never overwritten after creation
 
 ```text
-GVP XLS files → npm run import → volcanoes.json
+GVP WFS API → npm run import → volcanoes.json (+eruptions.json)
                                       │
     ┌─────────────────────────────────┤
     │                                 │
@@ -148,9 +148,10 @@ Goal: Every volcano has a viewable, searchable wiki page with structured data.
 
 ## Key Files to Reuse
 
-- `volcano-lists/src/types.ts` — Volcano, SearchFilters, SearchResult interfaces
+- `volcano-lists/src/types.ts` — Volcano, Eruption, SearchFilters, SearchResult interfaces
 - `volcano-lists/src/search.ts` — search() and getDistinctValues() functions
-- `volcano-lists/src/import.ts` — XLS parsing logic (for data refresh)
+- `volcano-lists/src/import-api.ts` — GVP WFS API importer (primary)
+- `volcano-lists/src/import.ts` — XLS parsing logic (fallback)
 - `amdWiki/plugins/LocationPlugin.ts` — Already renders embedded OSM maps from coordinates. Volcano profile pages can use `[{Location coords='lat,lon' embed=true name='Name'}]` directly — no custom map plugin needed for single-volcano views. Only the world map (Phase 3) needs a custom VolcanoMapPlugin.
 
 ## Key amdWiki Files (reference, not modified)
@@ -163,10 +164,58 @@ Goal: Every volcano has a viewable, searchable wiki page with structured data.
 
 Everything is additive via the addon system.
 
+## GVP WFS API (Data Source)
+
+Data is now imported via the GVP GeoServer WFS API instead of manual XLS downloads:
+
+- **Base URL:** `https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows`
+- **Endpoints:** Holocene Volcanoes, Pleistocene Volcanoes, Holocene Eruptions
+- **Format:** GeoJSON (also supports CSV, KML, Shapefile, GML)
+- **Docs:** <https://volcano.si.edu/database/webservices.cfm>
+
+The API provides additional fields already imported into `volcanoes.json` but not yet used in the UI:
+
+- `geologicalSummary` — full text descriptions (available for VolcanoInfoboxPlugin, Phase 1 Step 4)
+- `primaryPhotoLink`, `primaryPhotoCaption`, `primaryPhotoCredit` — volcano photos (available for Phase 4 rich profiles)
+
+Eruption history (11,079 records) is available via `npm run import:eruptions` for the Phase 5 eruptions dashboard.
+
+## USGS HANS API (Current Activity)
+
+Real-time volcano alert data for US volcanoes via the USGS Hazard Alert Notification System:
+
+- **Base URL:** `https://volcanoes.usgs.gov/hans-public/api`
+- **Docs:** <https://volcanoes.usgs.gov/hans-public/api/>
+- **Format:** JSON
+- **Scope:** US volcanoes only (65 monitored)
+
+Key endpoints used:
+
+| Endpoint | Description |
+| --- | --- |
+| `/notice/getDailySummaryData` | Daily synopses with alert levels and previous states |
+| `/volcano/getElevatedVolcanoes` | Currently elevated volcanoes (ADVISORY/WATCH/WARNING) |
+| `/volcano/getMonitoredVolcanoes` | All USGS-monitored volcanoes |
+
+Additional endpoints available for future use:
+
+| Endpoint | Description |
+| --- | --- |
+| `/volcano/getVolcano/{vnum}` | Single volcano by GVP number |
+| `/volcano/newestForVolcano/{vnum}` | Latest notice for a volcano |
+| `/notice/getRecentNotices` | Last month of notices |
+| `/notice/recent/{obs}/{days}` | Recent notices by observatory (avo, hvo, cvo, calvo, yvo, nmi) |
+| `/notice/getVonasWithinLastYear` | Aviation notices (VONA) |
+| `/volcano/getSocialMediaRSS` | RSS feed |
+
+Imported via `npm run import:activity` → `data/activity.json`. Links to GVP data via `vnum` (GVP Volcano Number). Feeds the Phase 5 Current Eruptions dashboard.
+
 ## Data Refresh Workflow
 
-- Download new XLS files from volcano.si.edu
-- Run import to regenerate `volcanoes.json`
+- Run `npm run import` to fetch latest data from GVP WFS API
+- Run `npm run import:activity` to fetch current USGS volcano alerts
+- Optionally run `npm run import:eruptions` to include eruption history
+- XLS fallback: `npm run import:xls` (requires manual download from volcano.si.edu)
 - VolcanoDataManager picks up changes on restart
 - Existing wiki page bodies (user-edited content) are preserved
 - Optionally re-run page importer with `--new-only` flag to add pages for newly added volcanoes
